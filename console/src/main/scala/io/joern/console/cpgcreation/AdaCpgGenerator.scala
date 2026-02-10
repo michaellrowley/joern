@@ -6,6 +6,15 @@ import io.shiftleft.codepropertygraph.generated.Cpg
 import java.nio.file.Path
 import scala.util.Try
 
+/** Ada CPG Generator
+  *
+  * This generator expects an `adasrc2cpg` tool to be available. For information about how other language frontends are
+  * provided and maintained, see docs/LANGUAGE_FRONTEND_PROVIDERS.md
+  *
+  * Ada file extensions:
+  *   - .adb (Ada body files - implementation)
+  *   - .ads (Ada specification files - interface)
+  */
 case class AdaCpgGenerator(config: FrontendConfig, rootPath: Path) extends CpgGenerator {
   private lazy val command: Path = if (isWin) rootPath.resolve("adasrc2cpg.bat") else rootPath.resolve("adasrc2cpg")
 
