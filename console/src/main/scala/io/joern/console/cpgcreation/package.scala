@@ -20,6 +20,7 @@ package object cpgcreation {
   ): Option[CpgGenerator] = {
     lazy val conf = config.withArgs(args)
     language match {
+      case Languages.ADA                => Some(AdaCpgGenerator(conf, rootPath))
       case Languages.CSHARP             => Some(CSharpCpgGenerator(conf, rootPath))
       case Languages.CSHARPSRC          => Some(CSharpSrcCpgGenerator(conf, rootPath))
       case Languages.C | Languages.NEWC => Some(CCpgGenerator(conf, rootPath))
@@ -96,6 +97,7 @@ package object cpgcreation {
 
   private def guessLanguageForRegularFile(file: Path): Option[String] = {
     file.fileName.toLowerCase match {
+      case f if f.endsWith(".adb") || f.endsWith(".ads") => Some(Languages.ADA)
       case f if isJavaBinary(f)      => Some(Languages.JAVA)
       case f if isCsharpFile(f)      => Some(Languages.CSHARPSRC)
       case f if isGoFile(f)          => Some(Languages.GOLANG)

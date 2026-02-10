@@ -11,8 +11,10 @@ import scala.util.Try
 
 object CpgGeneratorFactory {
   private val KNOWN_LANGUAGES = Set(
+    Languages.ADA,
     Languages.C,
     Languages.CSHARP,
+    Languages.CSHARPSRC,
     Languages.GOLANG,
     Languages.GHIDRA,
     Languages.JAVA,
@@ -25,6 +27,7 @@ object CpgGeneratorFactory {
     Languages.KOTLIN,
     Languages.NEWC,
     Languages.JAVASRC,
+    Languages.RUBYSRC,
     Languages.SWIFTSRC
   )
 }
