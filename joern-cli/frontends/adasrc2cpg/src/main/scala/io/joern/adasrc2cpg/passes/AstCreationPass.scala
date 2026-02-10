@@ -68,6 +68,16 @@ class AstCreationPass(cpg: Cpg, parsedFiles: List[Path], config: Config, report:
         createCallNode(node, parent, diffGraph)
       case "Identifier" | "DefiningName" =>
         createIdentifierNode(node, parent, diffGraph)
+      case "PackageDecl" | "PackageBody" =>
+        createPackageNode(node, parent, diffGraph)
+      case "TypeDecl" | "SubtypeDecl" =>
+        createTypeNode(node, parent, diffGraph)
+      case "GenericPackageDecl" | "GenericSubpDecl" =>
+        createGenericNode(node, parent, diffGraph)
+      case "TaskTypeDecl" | "TaskBody" | "ProtectedTypeDecl" | "ProtectedBody" =>
+        createTaskOrProtectedNode(node, parent, diffGraph)
+      case "ExceptionHandler" =>
+        createExceptionHandlerNode(node, parent, diffGraph)
       case _ =>
         // For other nodes, just process children
         node.children.foreach { child =>
@@ -153,6 +163,107 @@ class AstCreationPass(cpg: Cpg, parsedFiles: List[Path], config: Config, report:
       .flatMap(_.text)
       .orElse(node.text)
       .getOrElse("unknown")
+  }
+
+  private def createPackageNode(node: AstNode, parent: StoredNode, diffGraph: DiffGraphBuilder): Unit = {
+    val packageName = extractName(node)
+    val namespace = NewNamespace()
+      .name(packageName)
+      .order(diffGraph.size)
+    
+    diffGraph.addNode(namespace)
+    diffGraph.addEdge(parent, namespace, EdgeTypes.AST)
+    
+    // Process package body
+    node.children.foreach { child =>
+      if (child != null) {
+        processNode(child, namespace, diffGraph)
+      }
+    }
+  }
+
+  private def createTypeNode(node: AstNode, parent: StoredNode, diffGraph: DiffGraphBuilder): Unit = {
+    val typeName = extractName(node)
+    val typeDecl = NewTypeDecl()
+      .name(typeName)
+      .fullName(typeName)
+      .code(node.text.getOrElse(""))
+      .filename(parent.property(NodeTypes.NAMESPACE_BLOCK.FILENAME, ""))
+      .lineNumber(node.sloc_range.flatMap(_.start).map(_.line))
+      .columnNumber(node.sloc_range.flatMap(_.start).map(_.column))
+    
+    diffGraph.addNode(typeDecl)
+    diffGraph.addEdge(parent, typeDecl, EdgeTypes.AST)
+    
+    // Process type members
+    node.children.foreach { child =>
+      if (child != null) {
+        processNode(child, typeDecl, diffGraph)
+      }
+    }
+  }
+
+  private def createGenericNode(node: AstNode, parent: StoredNode, diffGraph: DiffGraphBuilder): Unit = {
+    val genericName = extractName(node)
+    
+    // Create TYPE_PARAMETER nodes for generic parameters
+    val genericParams = node.children.filter(_.kind == "GenericFormalPart")
+    genericParams.foreach { param =>
+      val paramName = extractName(param)
+      val typeParam = NewTypeParameter()
+        .name(paramName)
+        .code(param.text.getOrElse(""))
+      
+      diffGraph.addNode(typeParam)
+      diffGraph.addEdge(parent, typeParam, EdgeTypes.AST)
+    }
+    
+    // Process the generic body
+    node.children.foreach { child =>
+      if (child != null && child.kind != "GenericFormalPart") {
+        processNode(child, parent, diffGraph)
+      }
+    }
+  }
+
+  private def createTaskOrProtectedNode(node: AstNode, parent: StoredNode, diffGraph: DiffGraphBuilder): Unit = {
+    val name = extractName(node)
+    val typeDecl = NewTypeDecl()
+      .name(name)
+      .fullName(name)
+      .code(node.text.getOrElse(""))
+      .filename(parent.property(NodeTypes.NAMESPACE_BLOCK.FILENAME, ""))
+      .lineNumber(node.sloc_range.flatMap(_.start).map(_.line))
+      .columnNumber(node.sloc_range.flatMap(_.start).map(_.column))
+    
+    diffGraph.addNode(typeDecl)
+    diffGraph.addEdge(parent, typeDecl, EdgeTypes.AST)
+    
+    // Process task/protected members
+    node.children.foreach { child =>
+      if (child != null) {
+        processNode(child, typeDecl, diffGraph)
+      }
+    }
+  }
+
+  private def createExceptionHandlerNode(node: AstNode, parent: StoredNode, diffGraph: DiffGraphBuilder): Unit = {
+    // Create a CONTROL_STRUCTURE node for exception handler
+    val handler = NewControlStructure()
+      .controlStructureType("TRY")
+      .code(node.text.getOrElse("exception handler"))
+      .lineNumber(node.sloc_range.flatMap(_.start).map(_.line))
+      .columnNumber(node.sloc_range.flatMap(_.start).map(_.column))
+    
+    diffGraph.addNode(handler)
+    diffGraph.addEdge(parent, handler, EdgeTypes.AST)
+    
+    // Process exception handler body
+    node.children.foreach { child =>
+      if (child != null) {
+        processNode(child, handler, diffGraph)
+      }
+    }
   }
 }
 

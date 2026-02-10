@@ -76,11 +76,11 @@ class LibadalangRunner(config: Config) {
     val outputFile = outputDir.resolve(outputFileName)
 
     try {
-      // Call Python script to parse Ada file with libadalang
-      val pythonScript = createLibadalangParserScript()
+      // Use the libadalang_parser.py script from resources
+      val parserScript = getLibadalangParserScript()
       val command = Seq(
         "python3",
-        pythonScript.toString,
+        parserScript.toString,
         adaFile.toString,
         outputFile.toString
       )
@@ -107,79 +107,34 @@ class LibadalangRunner(config: Config) {
     }
   }
 
-  private def createLibadalangParserScript(): Path = {
-    // Create a temporary Python script that uses libadalang
-    val script = Files.createTempFile("libadalang_parser", ".py")
+  private def getLibadalangParserScript(): Path = {
+    // First, try to get the script from resources
+    val resourceStream = getClass.getResourceAsStream("/libadalang_parser.py")
     
-    val scriptContent = """#!/usr/bin/env python3
-import sys
-import json
-try:
-    import libadalang as lal
-except ImportError:
-    print("Error: libadalang is not installed. Install with: pip install libadalang", file=sys.stderr)
-    sys.exit(1)
-
-def node_to_dict(node):
-    if node is None:
-        return None
-    
-    result = {
-        "kind": node.kind_name,
-        "text": node.text if hasattr(node, 'text') else "",
-        "sloc_range": {
-            "start": {"line": node.sloc_range.start.line, "column": node.sloc_range.start.column},
-            "end": {"line": node.sloc_range.end.line, "column": node.sloc_range.end.column}
-        } if hasattr(node, 'sloc_range') and node.sloc_range else None,
-        "children": []
+    if (resourceStream != null) {
+      // Extract script from resources to a temporary location
+      val tempScript = Files.createTempFile("libadalang_parser", ".py")
+      try {
+        val bytes = resourceStream.readAllBytes()
+        Files.write(tempScript, bytes)
+        tempScript.toFile.setExecutable(true)
+        tempScript
+      } finally {
+        resourceStream.close()
+      }
+    } else {
+      // Fallback: check if script exists in the frontend directory
+      val frontendDir = Paths.get(getClass.getProtectionDomain.getCodeSource.getLocation.toURI)
+        .getParent.getParent.getParent.getParent
+      val scriptPath = frontendDir.resolve("src/main/resources/libadalang_parser.py")
+      
+      if (Files.exists(scriptPath)) {
+        scriptPath
+      } else {
+        throw new RuntimeException(
+          "libadalang_parser.py not found. Please ensure it's in the resources directory."
+        )
+      }
     }
-    
-    for child in node:
-        if child is not None:
-            result["children"].append(node_to_dict(child))
-    
-    return result
-
-def parse_ada_file(input_file, output_file):
-    try:
-        context = lal.AnalysisContext()
-        unit = context.get_from_file(input_file)
-        
-        if unit.root is None:
-            print(f"Error: Failed to parse {input_file}", file=sys.stderr)
-            if unit.diagnostics:
-                for diag in unit.diagnostics:
-                    print(f"  {diag}", file=sys.stderr)
-            return False
-        
-        ast_dict = {
-            "file": input_file,
-            "root": node_to_dict(unit.root)
-        }
-        
-        with open(output_file, 'w') as f:
-            json.dump(ast_dict, f, indent=2)
-        
-        return True
-        
-    except Exception as e:
-        print(f"Error parsing {input_file}: {e}", file=sys.stderr)
-        return False
-
-if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python3 script.py <input_ada_file> <output_json_file>", file=sys.stderr)
-        sys.exit(1)
-    
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
-    
-    success = parse_ada_file(input_file, output_file)
-    sys.exit(0 if success else 1)
-"""
-    
-    Files.write(script, scriptContent.getBytes("UTF-8"))
-    script.toFile.setExecutable(true)
-    script
   }
 }
