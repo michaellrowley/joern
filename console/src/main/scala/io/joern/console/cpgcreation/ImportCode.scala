@@ -49,6 +49,7 @@ class ImportCode[T <: Project](console: io.joern.console.Console[T])(implicit
 
   def c: SourceBasedFrontend    = new CFrontend("c")
   def cpp: SourceBasedFrontend  = new CFrontend("cpp", extension = "cpp")
+  def ada: SourceBasedFrontend  = new SourceBasedFrontend("ada", Languages.ADA, "Ada Source Frontend", "adb")
   def java: SourceBasedFrontend = new SourceBasedFrontend("java", Languages.JAVASRC, "Java Source Frontend", "java")
   def jvm: Frontend =
     new BinaryFrontend("jvm", Languages.JAVA, "Java/Dalvik Bytecode Frontend (based on SOOT's jimple)")
@@ -73,6 +74,7 @@ class ImportCode[T <: Project](console: io.joern.console.Console[T])(implicit
 
   private def allFrontends: List[Frontend] =
     List(
+      ada,
       c,
       cpp,
       ghidra,

@@ -11,6 +11,7 @@ object Projects {
   lazy val macros            = project.in(file("macros"))
   lazy val semanticcpg       = project.in(file("semanticcpg"))
 
+  lazy val adasrc2cpg    = project.in(frontendsRoot / "adasrc2cpg")
   lazy val c2cpg         = project.in(frontendsRoot / "c2cpg")
   lazy val ghidra2cpg    = project.in(frontendsRoot / "ghidra2cpg")
   lazy val x2cpg         = project.in(frontendsRoot / "x2cpg")

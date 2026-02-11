@@ -1,0 +1,36 @@
+package io.joern.console.cpgcreation
+
+import io.joern.console.FrontendConfig
+import io.shiftleft.codepropertygraph.generated.Cpg
+
+import java.nio.file.Path
+import scala.util.Try
+
+/** Ada CPG Generator
+  *
+  * This generator expects an `adasrc2cpg` tool to be available. For information about how other language frontends are
+  * provided and maintained, see docs/LANGUAGE_FRONTEND_PROVIDERS.md
+  *
+  * Ada file extensions:
+  *   - .adb (Ada body files - implementation)
+  *   - .ads (Ada specification files - interface)
+  */
+case class AdaCpgGenerator(config: FrontendConfig, rootPath: Path) extends CpgGenerator {
+  private lazy val command: Path = if (isWin) rootPath.resolve("adasrc2cpg.bat") else rootPath.resolve("adasrc2cpg")
+
+  override def generate(inputPath: String, outputPath: String): Try[String] = {
+    val arguments = List(inputPath) ++ Seq("-o", outputPath) ++ config.cmdLineParams
+    runShellCommand(command.toString, arguments).map(_ => outputPath)
+  }
+
+  override def isAvailable: Boolean =
+    command.toFile.exists
+
+  override def isJvmBased = true
+
+  override def applyPostProcessingPasses(cpg: Cpg): Cpg = {
+    // No post-processing passes for Ada yet
+    cpg
+  }
+
+}

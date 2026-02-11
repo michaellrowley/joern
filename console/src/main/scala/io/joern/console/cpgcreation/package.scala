@@ -20,6 +20,7 @@ package object cpgcreation {
   ): Option[CpgGenerator] = {
     lazy val conf = config.withArgs(args)
     language match {
+      case Languages.ADA                => Some(AdaCpgGenerator(conf, rootPath))
       case Languages.CSHARP             => Some(CSharpCpgGenerator(conf, rootPath))
       case Languages.CSHARPSRC          => Some(CSharpSrcCpgGenerator(conf, rootPath))
       case Languages.C | Languages.NEWC => Some(CCpgGenerator(conf, rootPath))
@@ -76,6 +77,9 @@ package object cpgcreation {
   private def isJavaBinary(filename: String): Boolean =
     Seq(".jar", ".war", ".ear", ".apk").exists(filename.endsWith)
 
+  private def isAdaFile(filename: String): Boolean =
+    Seq(".adb", ".ads").exists(filename.endsWith)
+
   private def isCsharpFile(filename: String): Boolean =
     Seq(".csproj", ".cs").exists(filename.endsWith)
 
@@ -96,6 +100,7 @@ package object cpgcreation {
 
   private def guessLanguageForRegularFile(file: Path): Option[String] = {
     file.fileName.toLowerCase match {
+      case f if isAdaFile(f)         => Some(Languages.ADA)
       case f if isJavaBinary(f)      => Some(Languages.JAVA)
       case f if isCsharpFile(f)      => Some(Languages.CSHARPSRC)
       case f if isGoFile(f)          => Some(Languages.GOLANG)
